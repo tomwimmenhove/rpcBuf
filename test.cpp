@@ -203,13 +203,13 @@ private:
 	std::vector<std::unique_ptr<caller_base>> callers;
 };
 
-template<size_t ID, typename T> class sender_functor;
-template<size_t ID, typename T, typename... Args>
-class sender_functor<ID, T(Args...)>
+template<typename T> class sender_functor;
+template<typename T, typename... Args>
+class sender_functor<T(Args...)>
 {
 public:
-	sender_functor(call_dispatcher& dispatcher)
-		: dispatcher(dispatcher)
+	sender_functor(call_dispatcher& dispatcher, size_t id)
+		: dispatcher(dispatcher), id(id)
 	{ }
 
 	T operator()(Args&&... args)
@@ -228,7 +228,7 @@ public:
 		char ret[return_len];
 		std::tuple<Args...> params(std::forward<Args>(args)...);
 
-		dispatcher.exec(ID, ret, return_len, &params, sizeof...(Args) ? sizeof(std::tuple<Args...>) : 0);
+		dispatcher.exec(id, ret, return_len, &params, sizeof...(Args) ? sizeof(std::tuple<Args...>) : 0);
 
 		if constexpr (!std::is_same<T, void>::value)
 		{
@@ -238,6 +238,7 @@ public:
 
 private:
 	call_dispatcher& dispatcher;
+	const size_t id;
 };
 
 class call_sender
@@ -247,10 +248,10 @@ public:
 		: dispatcher(dispatcher)
 	{ }
 
-	template<size_t ID, typename T>
-	sender_functor<ID, T> get_functor()
+	template<typename T>
+	sender_functor<T> get_functor(size_t id)
 	{
-		return sender_functor<ID, T>(dispatcher);
+		return sender_functor<T>(dispatcher, id);
 	}
 
 private:
@@ -261,22 +262,23 @@ double foo(int x, float y, double z) { return x + y + z; }
 void bar() { std::cout << "Hello world\n"; }
 int square(int a) { return a * a; }
 
-#define DEFINE_CALL_OUT(id, func, proto) sender_functor<id, proto> func = get_functor<id, proto>()
-#define DEFINE_CALL_OUT_START
+#define DEFINE_CALL_OUT(func, proto) sender_functor<proto> func = get_functor<proto>(__COUNTER__ - 1 - first_counter)
+#define DEFINE_CALL_OUT_START inline const static size_t first_counter = __COUNTER__
 #define DEFINE_CALL_OUT_END
+#define CALL_OUT_INIT call_receiver(num_callers)
 
 #define DEFINE_CALL_IN(func, proto) set_caller(__COUNTER__ - 1 - first_counter, std::function<proto>(bind_to(&receiver_type::func, this)));
 
 #define DEFINE_CALL_IN_START \
 private: \
     using receiver_type = receiver_test; \
-	    inline static size_t first_counter = __COUNTER__; \
+	    inline const static size_t first_counter = __COUNTER__; \
 		void setup() \
 	    {
 
 #define DEFINE_CALL_IN_END \
 	} \
-	inline static size_t num_callers = (__COUNTER__ - 1 - first_counter);
+	inline const static size_t num_callers = (__COUNTER__ - 1 - first_counter)
 
 
 #ifdef DEFINE_CALL
@@ -324,8 +326,7 @@ class receiver_test : public call_receiver
 #include "call_definitions.h"
 
 public:
-	receiver_test()
-		: call_receiver(num_callers)
+	receiver_test() : CALL_OUT_INIT
 	{
 		setup();
 	}

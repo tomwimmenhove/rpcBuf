@@ -262,40 +262,7 @@ double foo(int x, float y, double z) { return x + y + z; }
 void bar() { std::cout << "Hello world\n"; }
 int square(int a) { return a * a; }
 
-#define DEFINE_CALL_OUT(func, proto) sender_functor<proto> func = get_functor<proto>(__COUNTER__ - 1 - first_counter)
-#define DEFINE_CALL_OUT_START inline const static size_t first_counter = __COUNTER__
-#define DEFINE_CALL_OUT_END
-#define CALL_OUT_INIT call_receiver(num_callers)
-
-#define DEFINE_CALL_IN(func, proto) set_caller(__COUNTER__ - 1 - first_counter, std::function<proto>(bind_to(&receiver_type::func, this)));
-
-#define DEFINE_CALL_IN_START \
-private: \
-    using receiver_type = receiver_test; \
-	    inline const static size_t first_counter = __COUNTER__; \
-		void setup() \
-	    {
-
-#define DEFINE_CALL_IN_END \
-	} \
-	inline const static size_t num_callers = (__COUNTER__ - 1 - first_counter)
-
-
-#ifdef DEFINE_CALL
-#undef DEFINE_CALL
-#endif /* DEFINE_CALL */
-#define DEFINE_CALL DEFINE_CALL_OUT
-
-#ifdef DEFINE_CALL_START
-#undef DEFINE_CALL_START
-#endif /* DEFINE_CALL_START */
-#define DEFINE_CALL_START DEFINE_CALL_OUT_START
-
-#ifdef DEFINE_CALL_END
-#undef DEFINE_CALL_END
-#endif /* DEFINE_CALL_END */
-#define DEFINE_CALL_END DEFINE_CALL_OUT_END
-
+#include "call_out_definitions.h"
 class sender_test : call_sender
 {
 public:
@@ -303,27 +270,14 @@ public:
 		: call_sender(dispatcher)
 	{ }
 
-#include "call_definitions.h"
+#include "call_declarations.h"
 };
 
-#ifdef DEFINE_CALL
-#undef DEFINE_CALL
-#endif /* DEFINE_CALL */
-#define DEFINE_CALL DEFINE_CALL_IN
-
-#ifdef DEFINE_CALL_START
-#undef DEFINE_CALL_START
-#endif /* DEFINE_CALL_START */
-#define DEFINE_CALL_START DEFINE_CALL_IN_START
-
-#ifdef DEFINE_CALL_END
-#undef DEFINE_CALL_END
-#endif /* DEFINE_CALL_END */
-#define DEFINE_CALL_END DEFINE_CALL_IN_END
+#include "call_in_definitions.h"
 
 class receiver_test : public call_receiver
 {
-#include "call_definitions.h"
+#include "call_declarations.h"
 
 public:
 	receiver_test() : CALL_OUT_INIT

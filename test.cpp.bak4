@@ -1,0 +1,146 @@
+#include <utility>
+#include <type_traits>
+#include <iostream>
+
+#include <tuple>
+#include <iostream>
+
+
+#include <utility>
+
+using std::cout;
+using std::endl;
+
+double foo(int x, float y, double z)
+{
+	return x + y + z;
+}
+
+struct caller_interface
+{
+	virtual void operator()(void* dest_mem, const void* param_mem) = 0;
+
+	virtual ~caller_interface()
+	{ }
+
+protected:
+	caller_interface(void* fn_ptr)
+		: fn_ptr(fn_ptr)
+	{ }
+
+	void* fn_ptr;
+};
+
+template <typename T, typename ...Args>
+struct call_tuple_args : caller_interface
+{
+	call_tuple_args(T (*func)(Args...))
+		: caller_interface((void*) func)
+	{ }
+
+	/* Execute func using the tuple as arguments and return the result */
+	T operator()(const std::tuple<Args...>& params)
+	{
+		return call_fn(params, std::make_index_sequence<sizeof...(Args)>{});
+	}
+	
+	/* Execute func using a tuple pointed to by void pointer 'param_mem' as arguments
+	 * and return the result */
+	T operator()(const void* param_mem)
+	{
+		return operator()(*(std::tuple<Args...>*) param_mem);
+	}
+
+	/* Execute func using a tuple pointed to by void pointer 'param_mem' as arguments
+	 * and copy the result into memory pointed to by void pointer 'dest_mem' */
+	void operator()(void* dest_mem, const void* param_mem) override
+	{
+		*((T*) dest_mem) = operator()(param_mem);
+	}
+
+private:
+	template<typename U, U... ints>
+	T call_fn(const std::tuple<Args...>& params, std::integer_sequence<U, ints...>)
+	{
+		auto func = (T (*)(Args...)) fn_ptr;
+
+		return func(std::get<ints>(params) ...);
+	}
+};
+
+
+auto caller_foo = call_tuple_args<double, int, float, double>(foo);
+
+caller_interface callers[] =
+{
+	caller_foo,
+};
+//auto fooCaller = call_tuple_args<double, int, float, double>{ foo };
+
+//void (*func)(void*, const void* param_mem) = fooCaller.src_dest;
+
+
+/*void (*func[])(void* dest_mem, const void* param_mem) =
+{
+	fooCaller.src_dest
+};
+*/
+
+int main(void)
+{
+	std::tuple<int, float, double> t = std::make_tuple(1, 1.2f, 5);
+	double d;
+
+	auto caller = call_tuple_args<double, int, float, double>(foo);
+
+	caller(&d, &t);
+	cout << d << endl;
+
+//	auto f = call_tuple_args<double, int, float, double>{ foo }((void*) &t);
+//	cout << f << endl;
+	return 0;
+}
+
+struct args
+{
+	int a;
+	int b;
+	int c;
+};
+
+template<typename T, typename U, typename... Args>
+T call_out(Args&&... args)
+{
+	int return_len;
+
+	if constexpr (!std::is_same<T, void>::value)
+	{
+		return_len = sizeof(T);
+	}
+	else
+	{
+		return_len = 0;
+	}
+
+	char ret[return_len];
+	T* retp = (T*)ret;
+
+	U a = {std::forward<Args>(args)...};
+
+	*retp = a.b;
+
+	if constexpr (!std::is_same<T, void>::value)
+	{
+		return *(T*)ret;
+	}
+}
+
+int mainiac()
+{
+	int r = call_out<int, args>(5, 6, 7);
+	
+	std::cout << r << '\n';
+
+	return 0;
+}
+

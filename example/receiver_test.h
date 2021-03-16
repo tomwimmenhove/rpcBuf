@@ -32,5 +32,4 @@ public:
 private:
 	double foo(int x, float y, double z) { return x + y + z; }
 	void bar() { std::cout << "Hello world\n"; }
-	int square(int a) { return a * a; }
 };

@@ -1,5 +1,7 @@
+// Compile with: g++ -o example example.cpp -std=c++17 -Wall -O2
+
 #include <iostream>
-#include "rpcbuf.h"
+#include "../src/rpcbuf.h"
 
 #include "receiver_test.h"
 #include "sender_test.h"

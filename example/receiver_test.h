@@ -1,6 +1,6 @@
 #include <iostream>
-#include "rpcbuf.h"
-#include "call_in_definitions.h"
+#include "../src/rpcbuf.h"
+#include "../src/call_in_definitions.h"
 
 class receiver_test : public call_receiver
 {

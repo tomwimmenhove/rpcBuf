@@ -1,6 +1,6 @@
 #include <iostream>
-#include "rpcbuf.h"
-#include "call_out_definitions.h"
+#include "../src/rpcbuf.h"
+#include "../src/call_out_definitions.h"
 
 class sender_test : call_sender
 {

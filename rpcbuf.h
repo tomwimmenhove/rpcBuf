@@ -1,8 +1,9 @@
+#ifndef RPCBUF_H
+#define RPCBUF_H
+
 #include <utility>
 #include <type_traits>
-#include <iostream>
 #include <tuple>
-#include <iostream>
 #include <utility>
 #include <memory>
 #include <type_traits>
@@ -141,7 +142,6 @@ public:
 	template <typename T, typename... Args>
 	void set_caller(size_t id, std::function<T(Args...)> func)
 	{
-		std::cout << "id: " << id << '\n';
 		if (id < 0 || id >= callers.size())
 		{
 			throw std::overflow_error("Caller ID out of range\n");
@@ -258,50 +258,4 @@ private:
 	call_dispatcher& dispatcher;
 };
 
-double foo(int x, float y, double z) { return x + y + z; }
-void bar() { std::cout << "Hello world\n"; }
-int square(int a) { return a * a; }
-
-#include "call_out_definitions.h"
-class sender_test : call_sender
-{
-public:
-	sender_test(call_dispatcher& dispatcher)
-		: call_sender(dispatcher)
-	{ }
-
-#include "call_declarations.h"
-};
-
-#include "call_in_definitions.h"
-
-class receiver_test : public call_receiver
-{
-#include "call_declarations.h"
-
-public:
-	receiver_test() : CALL_OUT_INIT
-	{
-		setup();
-	}
-
-
-private:
-	double foo(int x, float y, double z) { return x + y + z; }
-	void bar() { std::cout << "Hello world\n"; }
-	int square(int a) { return a * a; }
-};
-
-int main(void)
-{
-	receiver_test rt;
-
-	sender_test st(rt);
-
-	auto d = st.foo(1, 1.2f, 5);
-	std::cout << d << '\n';
-
-	st.bar();
-
-	return 0;
-}
+#endif /* RPCBUF_H */

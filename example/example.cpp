@@ -1,5 +1,3 @@
-// Compile with: g++ -o example example.cpp -std=c++17 -Wall -O2
-
 /* 
  * This file is part of the rpcbuf distribution (https://github.com/tomwimmenhove/rpcbuf).
  * Copyright (c) 2021 Tom Wimmenhove.

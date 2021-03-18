@@ -102,6 +102,8 @@ private:
 struct call_dispatcher
 {
 	virtual void exec(size_t id, void* mem, size_t dest_size, size_t param_size) = 0;
+	virtual void exec(size_t id, void* mem, size_t mem_size) = 0;
+	virtual void exec(size_t id, void* mem) = 0;
 
 	virtual ~call_dispatcher()  { }
 };
@@ -165,6 +167,28 @@ public:
 		}
 
 		caller.exec(mem);
+	}
+	
+	void exec(size_t id, void* mem, size_t mem_size) override
+	{
+		auto& caller = get_caller(id);
+
+		if (caller.get_return_size() > mem_size)
+		{
+			throw std::overflow_error("Called return memory overflow");
+		}
+
+		if (caller.get_param_size() > mem_size)
+		{
+			throw std::overflow_error("Called parameter memory overflow");
+		}
+
+		caller.exec(mem);
+	}
+
+	void exec(size_t id, void* mem) override
+	{
+		get_caller(id).exec(mem);
 	}
 
 	virtual ~call_receiver() { }

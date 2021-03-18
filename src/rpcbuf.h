@@ -29,7 +29,7 @@
 
 struct caller_base
 {
-	virtual void exec(void* dest_mem, const void* param_mem) { return; }
+	virtual void exec(void* mem) { return; }
 
 	virtual size_t get_param_size() = 0;
 	virtual size_t get_return_size() = 0;
@@ -45,12 +45,12 @@ struct call_tuple_args : caller_base
 		: func(func)
 	{ }
 
-	size_t get_param_size() override
+	constexpr size_t get_param_size() override
 	{
 		return sizeof...(Args) ? sizeof(std::tuple<Args...>) : 0;
 	}
 
-	size_t get_return_size() override
+	constexpr size_t get_return_size() override
 	{		
 		if constexpr (std::is_same<void, T>::value)
 		{
@@ -65,43 +65,27 @@ struct call_tuple_args : caller_base
 	/* Execute func using the tuple as arguments and return the result */
 	T operator()(const std::tuple<Args...>& params)
 	{
-		constexpr auto indices = std::make_index_sequence<sizeof...(Args)>{};
-		if constexpr (std::is_same<void, T>::value)
-		{
-			call_fn(params, indices);
-		}
-		else
-		{
-			return call_fn(params, indices);
-		}
+		return call_fn(params, std::make_index_sequence<sizeof...(Args)>{});
 	}
 	
-	/* Execute func using a tuple pointed to by void pointer 'param_mem' as arguments
+	/* Execute func using a tuple pointed to by void pointer 'mem' as arguments
 	 * and return the result */
-	T operator()(const void* param_mem)
+	T operator()(const void* mem)
 	{
-		const auto& params = *(std::tuple<Args...>*) param_mem;
-		if constexpr (std::is_same<void, T>::value)
-		{
-			operator()(params);
-		}
-		else
-		{
-			return operator()(params);
-		}
+		return operator()(*(std::tuple<Args...>*) mem);
 	}
 
-	/* Execute func using a tuple pointed to by void pointer 'param_mem' as arguments
-	 * and copy the result into memory pointed to by void pointer 'dest_mem' */
-	void exec(void* dest_mem, const void* param_mem) override
+	/* Execute func using a tuple pointed to by void pointer 'mem' as arguments
+	 * and copy the result back into the same memory */
+	void exec(void* mem) override
 	{
 		if constexpr (std::is_same<void, T>::value)
 		{
-			operator()(param_mem);
+			operator()(mem);
 		}
 		else
 		{
-			*((T*) dest_mem) = operator()(param_mem);
+			*((T*) mem) = operator()(mem);
 		}
 	}
 
@@ -109,14 +93,7 @@ private:
 	template<typename U, U... ints>
 	T call_fn(const std::tuple<Args...>& params, std::integer_sequence<U, ints...>)
 	{
-		if constexpr (std::is_same<void, T>::value)
-		{
-			func(std::get<ints>(params) ...);
-		}
-		else
-		{
-			return func(std::get<ints>(params) ...);
-		}
+		return func(std::get<ints>(params) ...);
 	}
 
 	std::function<T(Args...)> func;
@@ -124,7 +101,7 @@ private:
 
 struct call_dispatcher
 {
-	virtual void exec(size_t id, void* dest_mem, size_t dest_size, const void* param_mem, size_t param_size) = 0;
+	virtual void exec(size_t id, void* mem, size_t dest_size, size_t param_size) = 0;
 
 	virtual ~call_dispatcher()  { }
 };
@@ -173,7 +150,7 @@ public:
 		callers.push_back(std::move(std::make_unique<call_tuple_args<T, Args...>>(func)));
 	}
 
-	void exec(size_t id, void* dest_mem, size_t dest_size, const void* param_mem, size_t param_size) override
+	void exec(size_t id, void* mem, size_t dest_size, size_t param_size) override
 	{
 		auto& caller = get_caller(id);
 
@@ -187,7 +164,7 @@ public:
 			throw std::overflow_error("Called parameter memory overflow");
 		}
 
-		caller.exec(dest_mem, param_mem);
+		caller.exec(mem);
 	}
 
 	virtual ~call_receiver() { }
@@ -242,14 +219,20 @@ public:
 			return_len = 0;
 		}
 
-		char ret[return_len];
-		std::tuple<Args...> params(std::forward<Args>(args)...);
+		/* Allocate data for parameters and return value */
+		char data[return_len > sizeof(std::tuple<Args...>) ? return_len : sizeof(std::tuple<Args...>)];
 
-		dispatcher.exec(id, ret, return_len, &params, sizeof...(Args) ? sizeof(std::tuple<Args...>) : 0);
+		/* Create a tuple with parameters in it */
+		//*(std::tuple<Args...>*) data = std::tuple<Args...>(std::forward<Args>(args)...);
+
+		/* Create a tuple with parameters in it using placement new() */
+		new(data) std::tuple<Args...>(std::forward<Args>(args)...);
+
+		dispatcher.exec(id, data, return_len, sizeof...(Args) ? sizeof(std::tuple<Args...>) : 0);
 
 		if constexpr (!std::is_same<T, void>::value)
 		{
-			return *(T*)ret;
+			return *(T*)data;
 		}
 	}
 

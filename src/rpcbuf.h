@@ -29,7 +29,7 @@
 
 struct caller_base
 {
-	virtual void exec(void* mem) { return; }
+	virtual void exec(void*) { return; }
 
 	virtual size_t get_param_size() = 0;
 	virtual size_t get_return_size() = 0;
@@ -179,7 +179,7 @@ protected:
 private:
 	inline caller_base& get_caller(size_t id)
 	{
-		if (id < 0 || id >= callers.size())
+		if (id >= callers.size())
 		{   
 			throw std::overflow_error("Caller ID out of range\n");
 		}

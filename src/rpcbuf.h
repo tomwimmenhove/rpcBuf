@@ -228,7 +228,7 @@ public:
 		: dispatcher(dispatcher), id(id)
 	{ }
 
-	T operator()(Args&&... args)
+	T operator()(Args... args)
 	{
 		size_t return_len;
 

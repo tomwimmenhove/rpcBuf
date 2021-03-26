@@ -138,7 +138,11 @@ public:
 	{
 		if (id < 0 || id >= callers.size())
 		{
+#ifdef __cpp_exceptions
 			throw std::overflow_error("Caller ID out of range\n");
+#else
+			return;
+#endif
 		}
 
 		callers[id] = std::move(std::make_unique<call_tuple_args<T, Args...>>(func));
@@ -152,41 +156,80 @@ public:
 
 	void exec(size_t id, void* mem, size_t dest_size, size_t param_size) override
 	{
-		auto& caller = get_caller(id);
+		auto caller = get_caller(id);
 
-		if (caller.get_return_size() > dest_size)
+#ifndef __cpp_exceptions
+		if (!caller)
 		{
+			return;
+		}
+#endif
+
+		if (caller->get_return_size() > dest_size)
+		{
+#ifdef __cpp_exceptions
 			throw std::overflow_error("Called return memory overflow");
+#else
+			return;
+#endif
 		}
 
-		if (caller.get_param_size() > param_size)
+		if (caller->get_param_size() > param_size)
 		{
+#ifdef __cpp_exceptions
 			throw std::overflow_error("Called parameter memory overflow");
+#else
+			return;
+#endif
 		}
 
-		caller.exec(mem);
+		caller->exec(mem);
 	}
 	
 	void exec(size_t id, void* mem, size_t mem_size)
 	{
-		auto& caller = get_caller(id);
+		auto caller = get_caller(id);
 
-		if (caller.get_return_size() > mem_size)
+#ifndef __cpp_exceptions
+		if (!caller)
 		{
+			return;
+		}
+#endif
+
+		if (caller->get_return_size() > mem_size)
+		{
+#ifdef __cpp_exceptions
 			throw std::overflow_error("Called return memory overflow");
+#else
+			return;
+#endif
 		}
 
-		if (caller.get_param_size() > mem_size)
+		if (caller->get_param_size() > mem_size)
 		{
+#ifdef __cpp_exceptions
 			throw std::overflow_error("Called parameter memory overflow");
+#else
+			return;
+#endif
 		}
 
-		caller.exec(mem);
+		caller->exec(mem);
 	}
 
 	void exec(size_t id, void* mem)
 	{
-		get_caller(id).exec(mem);
+		auto caller = get_caller(id);
+
+#ifndef __cpp_exceptions
+		if (!caller)
+		{
+			return;
+		}
+#endif
+
+		caller->exec(mem);
 	}
 
 	virtual ~call_receiver() { }
@@ -199,20 +242,28 @@ protected:
 	}
 
 private:
-	inline caller_base& get_caller(size_t id)
+	inline caller_base* get_caller(size_t id)
 	{
 		if (id >= callers.size())
 		{   
+#ifdef __cpp_exceptions
 			throw std::overflow_error("Caller ID out of range\n");
+#else
+			return nullptr;
+#endif
 		}
 	
 		std::unique_ptr<caller_base>& p = callers[id];
 		if (!p)
 		{
+#ifdef __cpp_exceptions
 			throw std::overflow_error("Caller not initialized\n");
+#else
+			return nullptr;
+#endif
 		}
 
-		return *p;
+		return p.get();
 	}
 
 private:

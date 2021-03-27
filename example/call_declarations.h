@@ -15,7 +15,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-DEFINE_CALL_START;
+DEFINE_CALL_START(receiver_test);
 DEFINE_CALL(foo, double(int, float, double));
 DEFINE_CALL(bar, void());
 DEFINE_CALL_END;

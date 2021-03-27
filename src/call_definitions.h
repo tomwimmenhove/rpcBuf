@@ -19,15 +19,15 @@
 #define CALL_DEFINITIONS_H
 
 #define DEFINE_CALL_OUT(func, proto) sender_functor<proto> func = get_functor<proto>(__COUNTER__ - 1 - first_counter)
-#define DEFINE_CALL_OUT_START inline const static size_t first_counter = __COUNTER__
+#define DEFINE_CALL_OUT_START(type_name) inline const static size_t first_counter = __COUNTER__
 #define DEFINE_CALL_OUT_END
 #define CALL_OUT_INIT call_receiver(num_callers)
 
 #define DEFINE_CALL_IN(func, proto) set_caller(__COUNTER__ - 1 - first_counter, std::function<proto>(bind_to(&receiver_type::func, this)));
 
-#define DEFINE_CALL_IN_START \
+#define DEFINE_CALL_IN_START(type_name) \
 private: \
-    using receiver_type = receiver_test; \
+    using receiver_type = type_name; \
         inline const static size_t first_counter = __COUNTER__; \
         void setup() \
         {

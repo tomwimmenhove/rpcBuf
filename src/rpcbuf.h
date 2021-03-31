@@ -232,6 +232,48 @@ public:
 		caller->exec(mem);
 	}
 
+	size_t get_max_param_size()
+	{
+		size_t max = 0;
+
+		for (auto& caller: callers)
+		{
+			size_t size = caller->get_param_size();
+
+			if (size > max)
+			{
+				max = size;
+			}
+		}
+
+		return max;
+	}
+
+	size_t get_max_return_size()
+	{
+		size_t max = 0;
+
+		for (auto& caller: callers)
+		{
+			size_t size = caller->get_return_size();
+
+			if (size > max)
+			{
+				max = size;
+			}
+		}
+
+		return max;
+	}
+
+	size_t get_max_size()
+	{
+		size_t param_size = get_max_param_size();
+		size_t return_size = get_max_return_size();
+
+		return param_size > return_size ? param_size : return_size;
+	}
+
 	virtual ~call_receiver() { }
 
 protected:
